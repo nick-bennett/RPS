@@ -16,12 +16,17 @@ public class Terrain {
   }
 
   public void reset() {
-    for (int row = 0; row < grid.length; row++) {
-      RpsBreed[] rowContents = grid[row];
-      for (int col = 0; col < rowContents.length; col++) {
-        rowContents[col] = RpsBreed.values()[rng.nextInt(RpsBreed.values().length)];
+    for (RpsBreed[] row : grid) {
+      for (int col = 0; col < row.length; col++) {
+        row[col] = RpsBreed.values()[rng.nextInt(RpsBreed.values().length)];
       }
     }
+//    for (int row = 0; row < grid.length; row++) {
+//      RpsBreed[] rowContents = grid[row];
+//      for (int col = 0; col < rowContents.length; col++) {
+//        rowContents[col] = RpsBreed.values()[rng.nextInt(RpsBreed.values().length)];
+//      }
+//    }
   }
 
   public void step() {
