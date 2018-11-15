@@ -8,6 +8,7 @@ public class Terrain {
   private RpsBreed[][] grid;
   private Random rng;
   private Neighborhood neighborhood;
+  private long iterations;
 
   public Terrain(int size, Random rng, Neighborhood neighborhood) {
     grid = new RpsBreed[size][size];
@@ -27,6 +28,7 @@ public class Terrain {
 //        rowContents[col] = RpsBreed.values()[rng.nextInt(RpsBreed.values().length)];
 //      }
 //    }
+    iterations = 0;
   }
 
   public void step() {
@@ -41,6 +43,7 @@ public class Terrain {
     } else if (result > 0) {
       grid[defenderLocation.getRow()][defenderLocation.getColumn()] = attacker;
     }
+    iterations++;
   }
 
   public void step(int numSteps) {
@@ -63,6 +66,10 @@ public class Terrain {
     int row = (base.getRow() + offset.getRow() + grid.length) % grid.length;
     int col = (base.getColumn() + offset.getColumn() + grid.length) % grid.length;
     return new Location(row, col);
+  }
+
+  public long getIterations() {
+    return iterations;
   }
 
 }
