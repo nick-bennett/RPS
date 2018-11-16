@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.layout.GridPane?>
-<?import javafx.scene.layout.ColumnConstraints?>
+<?import edu.cnm.deepdive.rps.view.TerrainView?>
+<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.CheckBox?>
-<?import javafx.scene.text.Text?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Slider?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.Button?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.text.Text?>
 
-<?import edu.cnm.deepdive.rps.view.TerrainView?>
 <GridPane
   xmlns="http://javafx.com/javafx"
   xmlns:fx="http://javafx.com/fxml"
@@ -51,6 +52,7 @@
 
     <TerrainView
       fx:id="terrainView"
+      hexagonal="false"
       width="1200"
       height="1200"/>
 
@@ -103,6 +105,23 @@
     mnemonicParsing="true"
     GridPane.rowIndex="2"
     GridPane.columnIndex="1"
+    GridPane.halignment="CENTER"
+    GridPane.valignment="BOTTOM"/>
+
+  <ChoiceBox
+    fx:id="neighborhood"
+    GridPane.rowIndex="3"
+    GridPane.columnIndex="2"
+    GridPane.halignment="CENTER"
+    GridPane.valignment="TOP"
+    onAction="#changeNeighborhood"/>
+
+  <Label
+    text="%neighborhood_text"
+    labelFor="$neighborhood"
+    mnemonicParsing="true"
+    GridPane.rowIndex="2"
+    GridPane.columnIndex="2"
     GridPane.halignment="CENTER"
     GridPane.valignment="BOTTOM"/>
 

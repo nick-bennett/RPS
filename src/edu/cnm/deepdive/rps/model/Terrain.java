@@ -1,47 +1,59 @@
 package edu.cnm.deepdive.rps.model;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Random;
 
+/**
+ *
+ * @version 1.0
+ * @author Nicholas Bennett &amp; Deep Dive Coding Java+Android Bootcamp, Cohort 5
+ */
 public class Terrain {
 
   // Grid is assumed to be square!!
-  private RpsBreed[][] grid;
+  private Location bounds;
+  private Enum[][] grid;
   private Random rng;
-  private Neighborhood neighborhood;
+  private Neighborhood neighborhood = Neighborhood.VON_NEUMANN;
   private long iterations;
+  private Class clazz;
 
-  public Terrain(int size, Random rng, Neighborhood neighborhood) {
-    grid = new RpsBreed[size][size];
+  public <T extends Enum<T> & Competitive<T>> Terrain(Class<T> clazz, int size, Random rng) {
+    grid = new Enum[size][size];
+    bounds = new Location(size, size);
     this.rng = rng;
-    this.neighborhood = neighborhood;
+    this.clazz = clazz;
   }
 
   public void reset() {
-    for (RpsBreed[] row : grid) {
+    Enum[] values = new Enum[0];
+    try {
+      Method getValues = clazz.getMethod("values");
+      values = (Enum[]) getValues.invoke(null);
+    } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+      // Since clazz is an enum (subclass of Enum), should never happen.
+      throw new RuntimeException(e);
+    }
+    for (Enum[] row : grid) {
       for (int col = 0; col < row.length; col++) {
-        row[col] = RpsBreed.values()[rng.nextInt(RpsBreed.values().length)];
+        row[col] = values[rng.nextInt(values.length)];
       }
     }
-//    for (int row = 0; row < grid.length; row++) {
-//      RpsBreed[] rowContents = grid[row];
-//      for (int col = 0; col < rowContents.length; col++) {
-//        rowContents[col] = RpsBreed.values()[rng.nextInt(RpsBreed.values().length)];
-//      }
-//    }
     iterations = 0;
   }
 
+  @SuppressWarnings("unchecked")
   public void step() {
     Location attackerLocation = new Location(rng.nextInt(grid.length), rng.nextInt(grid.length));
-    RpsBreed attacker = grid[attackerLocation.getRow()][attackerLocation.getColumn()];
-    Location offset = neighborhood.randomNeighbor(rng);
-    Location defenderLocation  = normalize(attackerLocation, offset);
-    RpsBreed defender = grid[defenderLocation.getRow()][defenderLocation.getColumn()];
-    int result = RpsBreed.REFEREE.compare(attacker, defender);
+    Competitive attacker = (Competitive) grid[attackerLocation.getRow()][attackerLocation.getColumn()];
+    Location defenderLocation = neighborhood.randomNeighbor(rng, attackerLocation, bounds);
+    Competitive defender = (Competitive) grid[defenderLocation.getRow()][defenderLocation.getColumn()];
+    int result = attacker.getReferee().compare(attacker, defender);
     if (result < 0) {
-      grid[attackerLocation.getRow()][attackerLocation.getColumn()] = defender;
+      grid[attackerLocation.getRow()][attackerLocation.getColumn()] = (Enum) defender;
     } else if (result > 0) {
-      grid[defenderLocation.getRow()][defenderLocation.getColumn()] = attacker;
+      grid[defenderLocation.getRow()][defenderLocation.getColumn()] = (Enum) attacker;
     }
     iterations++;
   }
@@ -58,18 +70,20 @@ public class Terrain {
    *
    * @return
    */
-  public RpsBreed[][] getGrid() {
+  public Enum[][] getGrid() {
     return grid;
-  }
-
-  private Location normalize(Location base, Location offset) {
-    int row = (base.getRow() + offset.getRow() + grid.length) % grid.length;
-    int col = (base.getColumn() + offset.getColumn() + grid.length) % grid.length;
-    return new Location(row, col);
   }
 
   public long getIterations() {
     return iterations;
+  }
+
+  public Neighborhood getNeighborhood() {
+    return neighborhood;
+  }
+
+  public void setNeighborhood(Neighborhood neighborhood) {
+    this.neighborhood = neighborhood;
   }
 
 }

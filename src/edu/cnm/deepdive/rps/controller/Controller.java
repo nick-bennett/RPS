@@ -1,26 +1,33 @@
 package edu.cnm.deepdive.rps.controller;
 
-import edu.cnm.deepdive.rps.model.Moore;
+import edu.cnm.deepdive.rps.model.Neighborhood;
+import edu.cnm.deepdive.rps.model.RpslzBreed;
 import edu.cnm.deepdive.rps.model.Terrain;
-import edu.cnm.deepdive.rps.model.VonNeumann;
 import edu.cnm.deepdive.rps.view.TerrainView;
 import java.util.Random;
 import javafx.animation.AnimationTimer;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Slider;
 import javafx.scene.text.Text;
 
+/**
+ *
+ */
 public class Controller {
 
-  private static final int TERRAIN_SIZE = 75;
-  private static final int STEPS_PER_ITERATION = 100;
-  private static final int MAX_SLEEP_PER_ITERATION = 10;
+  private static final Neighborhood DEFAULT_NEIGHBORHOOD = Neighborhood.VON_NEUMANN;
+  private static final int TERRAIN_SIZE = 80;
+  private static final int STEPS_PER_ITERATION = 250;
+  private static final int MAX_SLEEP_PER_ITERATION = 11;
   private static final int MIX_THRESHOLD = 10;
   private static final int PAIRS_TO_MIX = 8;
+  private static final double HEX_VERT_SCALE = Math.sqrt(3) / 2;
 
   @FXML
   private TerrainView terrainView;
@@ -35,40 +42,60 @@ public class Controller {
   @FXML
   private Slider mixingSlider;
   @FXML
+  private ChoiceBox<Neighborhood> neighborhood;
+  @FXML
   private Button start;
   @FXML
   private Button stop;
   @FXML
   private Button reset;
 
-  private double defaultViewHeight;
-  private double defaultViewWidth;
+  private double unscaledWidth;
   private String iterationFormat;
   private Terrain terrain;
   private boolean running = false;
   private final Object lock = new Object();
   private Timer timer;
-  // TODO Create thread object(s).
 
   @FXML
   private void initialize() {
-    terrain = new Terrain(75, new Random(), new Moore());
-    defaultViewHeight = terrainView.getHeight();
-    defaultViewWidth = terrainView.getWidth();
+    terrain = new Terrain(RpslzBreed.class, TERRAIN_SIZE, new Random());
+    terrainView.setBreedCount(RpslzBreed.values().length);
     iterationFormat = iterationsLabel.getText();
-    speedSlider.setMax(MAX_SLEEP_PER_ITERATION);
-    reset(null);
+    speedSlider.setMax(MAX_SLEEP_PER_ITERATION - 1);
+    neighborhood.getItems().setAll(Neighborhood.values());
     timer = new Timer();
+    reset(null);
+    neighborhood.setValue(DEFAULT_NEIGHBORHOOD);
   }
 
   @FXML
   private void fitView(ActionEvent actionEvent) {
     if (fitCheckbox.isSelected()) {
+      unscaledWidth = terrainView.getWidth();
       terrainView.setWidth(viewScroller.getWidth() - 2);
       terrainView.setHeight(viewScroller.getHeight() - 2);
     } else {
-      terrainView.setWidth(defaultViewWidth);
-      terrainView.setHeight(defaultViewHeight);
+      terrainView.setWidth(unscaledWidth);
+      terrainView.setHeight(
+          unscaledWidth * (neighborhood.getValue().isHexagonal() ? HEX_VERT_SCALE : 1));
+    }
+    if (!running) {
+      draw();
+    }
+  }
+
+  @FXML
+  private void changeNeighborhood(ActionEvent actionEvent) {
+    Neighborhood prevNeighborhood = terrain.getNeighborhood();
+    Neighborhood neighborhood = this.neighborhood.getValue();
+    boolean wasHexagonal = prevNeighborhood.isHexagonal();
+    boolean isHexagonal = neighborhood.isHexagonal();
+    boolean changeHex = (wasHexagonal != isHexagonal);
+    terrain.setNeighborhood(neighborhood);
+    terrainView.setHexagonal(isHexagonal);
+    if (!fitCheckbox.isSelected() && changeHex) {
+      terrainView.setHeight(terrainView.getWidth() * (isHexagonal ? HEX_VERT_SCALE : 1));
     }
     if (!running) {
       draw();
@@ -85,19 +112,22 @@ public class Controller {
     new Runner().start();
   }
 
+  /**
+   * Signals simulation thread (if one is running) to stop.
+   *
+   * @param actionEvent   UI control event (may be null).
+   */
   @FXML
   public void stop(ActionEvent actionEvent) {
     running = false;
-    // TODO Investigate whether the thread should re-enable the buttons when it's done.
-    start.setDisable(false);
-    stop.setDisable(true);
-    reset.setDisable(false);
-    timer.stop();
   }
 
   @FXML
   private void reset(ActionEvent actionEvent) {
     terrain.reset();
+    terrainView.setHexagonal(DEFAULT_NEIGHBORHOOD.isHexagonal());
+    terrainView.setHeight(
+        terrainView.getWidth() * (DEFAULT_NEIGHBORHOOD.isHexagonal() ? HEX_VERT_SCALE : 1));
     start.setDisable(false);
     draw();
   }
@@ -107,6 +137,13 @@ public class Controller {
       terrainView.draw(terrain.getGrid());
       iterationsLabel.setText(String.format(iterationFormat, terrain.getIterations()));
     }
+  }
+
+  private void cleanAfterStop() {
+    start.setDisable(false);
+    stop.setDisable(true);
+    reset.setDisable(false);
+    timer.stop();
   }
 
   private class Timer extends AnimationTimer {
@@ -123,7 +160,7 @@ public class Controller {
     @Override
     public void run() {
       while (running) {
-        int sleep = (int) (1 + MAX_SLEEP_PER_ITERATION - speedSlider.getValue());
+        int sleep = MAX_SLEEP_PER_ITERATION - (int) speedSlider.getValue();
         synchronized (lock) {
           terrain.step(STEPS_PER_ITERATION);
           // TODO Mixing?
@@ -134,6 +171,7 @@ public class Controller {
           // DO NOTHING!
         }
       }
+      Platform.runLater(() -> cleanAfterStop());
     }
 
   }
